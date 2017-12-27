@@ -1,11 +1,11 @@
-# Fixed width file parser in GO (golang)
+# Fixed width file parser (encoder/decoder) for GO (golang)
 [![License](http://img.shields.io/:license-mit-blue.svg)](LICENSE)
-[![GoDoc](https://godoc.org/github.com/o1egl/fwparser?status.svg)](https://godoc.org/github.com/o1egl/fwparser)
-[![Build Status](http://img.shields.io/travis/o1egl/fwparser.svg?style=flat-square)](https://travis-ci.org/o1egl/fwparser)
-[![Coverage Status](http://img.shields.io/coveralls/o1egl/fwparser.svg?style=flat-square)](https://coveralls.io/r/o1egl/fwparser)
-[![Go Report Card](https://goreportcard.com/badge/github.com/o1egl/fwparser)](https://goreportcard.com/report/github.com/o1egl/fwparser)
+[![GoDoc](https://godoc.org/github.com/o1egl/fwencoder?status.svg)](https://godoc.org/github.com/o1egl/fwencoder)
+[![Build Status](http://img.shields.io/travis/o1egl/fwencoder.svg?style=flat-square)](https://travis-ci.org/o1egl/fwencoder)
+[![Coverage Status](http://img.shields.io/coveralls/o1egl/fwencoder.svg?style=flat-square)](https://coveralls.io/r/o1egl/fwencoder)
+[![Go Report Card](https://goreportcard.com/badge/github.com/o1egl/fwencoder)](https://goreportcard.com/report/github.com/o1egl/fwencoder)
 
-This library allows you to parse fixed width table data like:
+This library allows to parse fixed width table data like:
 
 ```
 Name            Address               Postcode Phone          Credit Limit Birthday
@@ -18,7 +18,7 @@ Chuck Norris    P.O. Box 872          77868    (713) 868-6003     10909300 19651
 To install the library use the following command:
 
 ```
-$ go get -u github.com/o1egl/fwparser
+$ go get -u github.com/o1egl/fwencoder
 ```
 
 ## Example
@@ -39,13 +39,7 @@ f, _ := os.Open("/path/to/file")
 defer f.Close
 
 var people []Person
-fwparser.UnmarshalReader(f, &people)
-
-// You can also parse data from byte array
-
-b, err := ioutil.ReadFile("/path/to/file")
-var people []Person
-fwparser.UnmarshalReader(f, &people)
+fwencoder.UnmarshalReader(f, &people)
 ```
 
 You can also parse data from byte array:
@@ -53,5 +47,5 @@ You can also parse data from byte array:
 ```go
 b, _ := ioutil.ReadFile("/path/to/file")
 var people []Person
-fwparser.Unmarshal(b, &people)
+fwencoder.Unmarshal(b, &people)
 ```

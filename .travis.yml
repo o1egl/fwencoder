@@ -1,6 +1,5 @@
 language: go
 go:
-    - 1.7.x
     - 1.8.x
     - 1.9.x
     - tip
@@ -13,7 +12,7 @@ before_install:
 install:
     - dep ensure
 script:
-    - diff -u <(echo -n) <(gofmt -d -s $(find . -type f -name '*.go' -not -path "./bindata/*"))
+    - diff -u <(echo -n) <(gofmt -d -s $(find . -type f -name '*.go' -not -path "./vendor/*"))
     - go test -coverprofile=parser.coverprofile
     - gover
     - goveralls -coverprofile=gover.coverprofile -service=travis-ci

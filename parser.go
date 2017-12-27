@@ -22,7 +22,7 @@ const (
 	jsonTagName   = "json"
 	format        = "format"
 
-	overflowErrMsg = "value %d is too big for field %s:%v"
+	overflowErrMsg = "value %v is too big for field %s:%v"
 	castingErrMsg  = `filed casting "%s" to "%s:%v"`
 )
 

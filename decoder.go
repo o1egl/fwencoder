@@ -1,4 +1,4 @@
-package fwparser
+package fwencoder
 
 import (
 	"bufio"
@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"encoding/json"
 	"runtime"
 
 	"github.com/pkg/errors"
@@ -42,6 +43,7 @@ var (
 //
 // To unmarshal raw data into a struct, Unmarshal tries to convert every column's data from string to
 // supported types (int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64, string, bool, time.Time).
+// It also supports slices and custom types by reading them as JSON.
 //
 // By default Unmarshal tries to match column names to struct's field names. This behaviour could be
 // overridden by `column` or `json` tags.
@@ -101,6 +103,9 @@ func UnmarshalReader(reader io.Reader, v interface{}) (err error) {
 
 	scanner := bufio.NewScanner(reader)
 	columnNames := getColumns(sliceType)
+	sort.Slice(columnNames, func(i, j int) bool {
+		return len([]rune(columnNames[i])) > len([]rune(columnNames[j]))
+	})
 	fieldsIndex := make(map[string]string)
 	isHeaderParsed := false
 	lineNum := 0
@@ -265,9 +270,16 @@ func setFieldValue(field reflect.Value, structField reflect.StructField, rawValu
 			} else {
 				field.Set(reflect.ValueOf(t))
 			}
-		} else {
-			return errors.Errorf("unsupported type %s.%s", field.Type().PkgPath(), field.Type().Name())
+			return nil
 		}
+		fallthrough
+	default:
+		v := reflect.New(field.Type())
+		err := json.Unmarshal([]byte(rawValue), v.Interface())
+		if err != nil {
+			return errors.Wrapf(err, `can't unmarshal '"%s" to %v`, rawValue, field.Type())
+		}
+		field.Set(v.Elem())
 	}
 	return nil
 }
@@ -280,7 +292,6 @@ func getColumns(sType reflect.Type) []string {
 		column := getRefName(field)
 		columnNames = append(columnNames, column)
 	}
-	sort.Sort(sort.Reverse(sort.StringSlice(columnNames)))
 	return columnNames
 }
 

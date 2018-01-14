@@ -21,7 +21,7 @@ To install the library use the following command:
 $ go get -u github.com/o1egl/fwencoder
 ```
 
-## Example
+## Decoding example
 
 Parsing data from io.Reader:
 
@@ -39,7 +39,7 @@ f, _ := os.Open("/path/to/file")
 defer f.Close
 
 var people []Person
-fwencoder.UnmarshalReader(f, &people)
+err := fwencoder.UnmarshalReader(f, &people)
 ```
 
 You can also parse data from byte array:
@@ -47,5 +47,35 @@ You can also parse data from byte array:
 ```go
 b, _ := ioutil.ReadFile("/path/to/file")
 var people []Person
-fwencoder.Unmarshal(b, &people)
+err := fwencoder.Unmarshal(b, &people)
+```
+
+
+## Encoding example
+
+```go
+people := []Person{
+	Name: "John",
+	Address: "P.O. Box 872",
+	Phone: "(713) 868-6003", 
+	CreditLimit: 10909300,
+	Bday: "19651203"
+}
+
+b, err := Marshal(&people)
+fmt.Println(string(b))
+```
+
+or you can directly write to io.Writer
+
+```go
+people := []Person{
+	Name: "John",
+	Address: "P.O. Box 872",
+	Phone: "(713) 868-6003", 
+	CreditLimit: 10909300,
+	Bday: "19651203"
+}
+
+err := MarshalWriter(os.Stdout, &people)
 ```

@@ -1,4 +1,4 @@
-package fwparser
+package fwencoder
 
 import (
 	"io/ioutil"
@@ -26,26 +26,28 @@ type TestStruct struct {
 	Uint64    uint64
 	Float32   float32
 	Float64   float64
-	Date      time.Time  `json:"Time"`
-	Birthday  time.Time  `column:"CustomDate" format:"02/01/2006"`
-	PString   *string    `column:"String"`
-	PBool     *bool      `column:"Bool"`
-	PInt8     *int8      `column:"Int8"`
-	PUint8    *uint8     `column:"Uint8"`
-	PFloat32  *float32   `column:"Float32"`
-	PBirthday *time.Time `column:"CustomDate" format:"02/01/2006"`
+	Date      time.Time `json:"Time"`
+	Birthday  time.Time `column:"CustomDate" format:"02/01/2006"`
+	PString   *string
+	PBool     *bool
+	PInt8     *int8
+	PUint8    *uint8
+	PFloat32  *float32
+	PBirthday *time.Time `format:"02/01/2006"`
 	Default   int
+	JsonArr   []int
+	JsonPtr   *[]int
 }
 
 func TestUnmarshal_Success(t *testing.T) {
 	b, err := ioutil.ReadFile("./testdata/correct_all_supported.txt")
 	if assert.NoError(t, err) {
-		s := "Test String"
-		bb := true
-		i := int8(-2)
-		ui := uint8(2)
-		f := float32(1.5)
-		d := time.Date(2017, 12, 27, 0, 0, 0, 0, time.UTC)
+		s := "Test Ptr String"
+		bb := false
+		i := int8(15)
+		ui := uint8(16)
+		f := float32(15.5)
+		d := time.Date(2017, 12, 28, 0, 0, 0, 0, time.UTC)
 
 		expected := []TestStruct{{
 			String:    "Test String",
@@ -70,6 +72,8 @@ func TestUnmarshal_Success(t *testing.T) {
 			PUint8:    &ui,
 			PFloat32:  &f,
 			PBirthday: &d,
+			JsonArr:   []int{1, 2, 3},
+			JsonPtr:   &[]int{4, 5, 6},
 		}}
 
 		var obtained []TestStruct
@@ -82,12 +86,12 @@ func TestUnmarshal_Success(t *testing.T) {
 func TestUnmarshal_Ptr_Success(t *testing.T) {
 	b, err := ioutil.ReadFile("./testdata/correct_all_supported.txt")
 	if assert.NoError(t, err) {
-		s := "Test String"
-		bb := true
-		i := int8(-2)
-		ui := uint8(2)
-		f := float32(1.5)
-		d := time.Date(2017, 12, 27, 0, 0, 0, 0, time.UTC)
+		s := "Test Ptr String"
+		bb := false
+		i := int8(15)
+		ui := uint8(16)
+		f := float32(15.5)
+		d := time.Date(2017, 12, 28, 0, 0, 0, 0, time.UTC)
 
 		expected := []*TestStruct{{
 			String:    "Test String",
@@ -112,6 +116,8 @@ func TestUnmarshal_Ptr_Success(t *testing.T) {
 			PUint8:    &ui,
 			PFloat32:  &f,
 			PBirthday: &d,
+			JsonArr:   []int{1, 2, 3},
+			JsonPtr:   &[]int{4, 5, 6},
 		}}
 
 		var obtained []*TestStruct
@@ -213,7 +219,7 @@ func TestIncorrectInput(t *testing.T) {
 
 	err := Unmarshal([]byte(fmt.Sprintf("Float32\nhello  ")), &([]A{}))
 	if assert.Error(t, err) {
-		assert.Contains(t, err.Error(), "error in line 2: unsupported type")
+		assert.Contains(t, err.Error(), "error in line 2: can't unmarshal")
 
 	}
 

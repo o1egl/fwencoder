@@ -1,2 +1,2 @@
-String         Int  Int8  Int16  Int32  Int64  Uint  Uint8  Uint16  Uint32  Uint64  Float32  Float64  Bool  Time                       CustomDate
-Test String    -1   -2    -3        -4  -5     1     2        3          4  5       1.5          2.5  true  2017-12-27T13:48:03Z       27/12/2017
+String         Int  Int8  Int16  Int32  Int64  Uint  Uint8  Uint16  Uint32  Uint64  Float32  Float64  Bool  Time                       CustomDate PString         PBool PInt8 PUint8 PFloat32  PBirthday  JsonArr JsonPtr
+Test String    -1   -2    -3        -4  -5     1     2        3          4  5       1.5          2.5  true  2017-12-27T13:48:03Z       27/12/2017 Test Ptr String 0     15    16     15.5      28/12/2017 [1,2,3] [4,5,6]

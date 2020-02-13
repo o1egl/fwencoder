@@ -5,7 +5,7 @@
 [![Coverage Status](http://img.shields.io/coveralls/o1egl/fwencoder.svg?style=flat-square)](https://coveralls.io/r/o1egl/fwencoder)
 [![Go Report Card](https://goreportcard.com/badge/github.com/o1egl/fwencoder)](https://goreportcard.com/report/github.com/o1egl/fwencoder)
 
-This library allows to parse fixed width table data like:
+This library is using to parse fixed-width table data like:
 
 ```
 Name            Address               Postcode Phone          Credit Limit Birthday

@@ -20,9 +20,6 @@ const (
 	columnTagName = "column"
 	jsonTagName   = "json"
 	format        = "format"
-
-	overflowErrMsg = "value %v is too big for field %s:%v"
-	castingErrMsg  = `filed casting "%s" to "%s:%v": %w`
 )
 
 type fwColumn struct {
@@ -186,54 +183,54 @@ func setFieldValue(field reflect.Value, structField reflect.StructField, rawValu
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		value, err := strconv.ParseInt(rawValue, 10, 0)
 		if err != nil {
-			return fmt.Errorf(castingErrMsg, rawValue, structField.Name, structField.Type, err)
+			return newCastingError(err, rawValue, structField)
 		}
 		if isPointer {
 			v := reflect.New(field.Type().Elem())
 			if v.Elem().OverflowInt(value) {
-				return fmt.Errorf(overflowErrMsg, value, structField.Name, structField.Type)
+				return newOverflowError(value, structField)
 			}
 			v.Elem().SetInt(value)
 			field.Set(v)
 		} else {
 			if field.OverflowInt(value) {
-				return fmt.Errorf(overflowErrMsg, value, structField.Name, structField.Type)
+				return newOverflowError(value, structField)
 			}
 			field.SetInt(value)
 		}
 	case reflect.Float32, reflect.Float64:
 		value, err := strconv.ParseFloat(rawValue, 64)
 		if err != nil {
-			return fmt.Errorf(castingErrMsg, rawValue, structField.Name, structField.Type, err)
+			return newCastingError(err, rawValue, structField)
 		}
 		if isPointer {
 			v := reflect.New(field.Type().Elem())
 			if v.Elem().OverflowFloat(value) {
-				return fmt.Errorf(overflowErrMsg, value, structField.Name, structField.Type)
+				return newOverflowError(value, structField)
 			}
 			v.Elem().SetFloat(value)
 			field.Set(v)
 		} else {
 			if field.OverflowFloat(value) {
-				return fmt.Errorf(overflowErrMsg, value, structField.Name, structField.Type)
+				return newOverflowError(value, structField)
 			}
 			field.SetFloat(value)
 		}
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		value, err := strconv.ParseUint(rawValue, 10, 64)
 		if err != nil {
-			return fmt.Errorf(castingErrMsg, rawValue, structField.Name, structField.Type, err)
+			return newCastingError(err, rawValue, structField)
 		}
 		if isPointer {
 			v := reflect.New(field.Type().Elem())
 			if v.Elem().OverflowUint(value) {
-				return fmt.Errorf(overflowErrMsg, value, structField.Name, structField.Type)
+				return newOverflowError(value, structField)
 			}
 			v.Elem().SetUint(value)
 			field.Set(v)
 		} else {
 			if field.OverflowUint(value) {
-				return fmt.Errorf(overflowErrMsg, value, structField.Name, structField.Type)
+				return newOverflowError(value, structField)
 			}
 			field.SetUint(value)
 		}
@@ -246,7 +243,7 @@ func setFieldValue(field reflect.Value, structField reflect.StructField, rawValu
 	case reflect.Bool:
 		value, err := strconv.ParseBool(rawValue)
 		if err != nil {
-			return fmt.Errorf(castingErrMsg, rawValue, structField.Name, structField.Type, err)
+			return newCastingError(err, rawValue, structField)
 		}
 		if isPointer {
 			field.Set(reflect.ValueOf(&value))
@@ -261,7 +258,7 @@ func setFieldValue(field reflect.Value, structField reflect.StructField, rawValu
 			}
 			t, err := time.Parse(timeFormat, rawValue)
 			if err != nil {
-				return fmt.Errorf(castingErrMsg, rawValue, structField.Name, structField.Type, err)
+				return newCastingError(err, rawValue, structField)
 			}
 			if isPointer {
 				field.Set(reflect.ValueOf(&t))
@@ -280,6 +277,14 @@ func setFieldValue(field reflect.Value, structField reflect.StructField, rawValu
 		field.Set(v.Elem())
 	}
 	return nil
+}
+
+func newCastingError(err error, rawValue string, structField reflect.StructField) error {
+	return fmt.Errorf(`filed casting "%s" to "%s:%v": %w`, rawValue, structField.Name, structField.Type, err)
+}
+
+func newOverflowError(value any, structField reflect.StructField) error {
+	return fmt.Errorf(`value %v is too big for field %s:%v`, value, structField.Name, structField.Type)
 }
 
 func getColumns(sType reflect.Type) []string {

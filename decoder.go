@@ -3,19 +3,17 @@ package fwencoder
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"reflect"
 	"regexp"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
-
-	"encoding/json"
-	"runtime"
-
-	"github.com/pkg/errors"
 )
 
 const (
@@ -24,7 +22,7 @@ const (
 	format        = "format"
 
 	overflowErrMsg = "value %v is too big for field %s:%v"
-	castingErrMsg  = `filed casting "%s" to "%s:%v"`
+	castingErrMsg  = `filed casting "%s" to "%s:%v": %w`
 )
 
 type fwColumn struct {
@@ -126,7 +124,7 @@ func UnmarshalReader(reader io.Reader, v interface{}) (err error) {
 			continue
 		}
 		if len(lineRunes) != headersLength {
-			return errors.Errorf("wrong data length in line %d", lineNum)
+			return fmt.Errorf("wrong data length in line %d", lineNum)
 		}
 
 		for _, prnColumn := range columns {
@@ -135,7 +133,7 @@ func UnmarshalReader(reader io.Reader, v interface{}) (err error) {
 
 		newItem, err := createObject(fieldsIndex, sliceType)
 		if err != nil {
-			return errors.Wrapf(err, "error in line %d", lineNum)
+			return fmt.Errorf("error in line %d: %w", lineNum, err)
 		}
 		if sliceItemType.Kind() != reflect.Ptr {
 			newItem = newItem.Elem()
@@ -188,54 +186,54 @@ func setFieldValue(field reflect.Value, structField reflect.StructField, rawValu
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		value, err := strconv.ParseInt(rawValue, 10, 0)
 		if err != nil {
-			return errors.Wrapf(err, castingErrMsg, rawValue, structField.Name, structField.Type)
+			return fmt.Errorf(castingErrMsg, rawValue, structField.Name, structField.Type, err)
 		}
 		if isPointer {
 			v := reflect.New(field.Type().Elem())
 			if v.Elem().OverflowInt(value) {
-				return errors.Errorf(overflowErrMsg, value, structField.Name, structField.Type)
+				return fmt.Errorf(overflowErrMsg, value, structField.Name, structField.Type)
 			}
 			v.Elem().SetInt(value)
 			field.Set(v)
 		} else {
 			if field.OverflowInt(value) {
-				return errors.Errorf(overflowErrMsg, value, structField.Name, structField.Type)
+				return fmt.Errorf(overflowErrMsg, value, structField.Name, structField.Type)
 			}
 			field.SetInt(value)
 		}
 	case reflect.Float32, reflect.Float64:
 		value, err := strconv.ParseFloat(rawValue, 64)
 		if err != nil {
-			return errors.Wrapf(err, castingErrMsg, rawValue, structField.Name, structField.Type)
+			return fmt.Errorf(castingErrMsg, rawValue, structField.Name, structField.Type, err)
 		}
 		if isPointer {
 			v := reflect.New(field.Type().Elem())
 			if v.Elem().OverflowFloat(value) {
-				return errors.Errorf(overflowErrMsg, value, structField.Name, structField.Type)
+				return fmt.Errorf(overflowErrMsg, value, structField.Name, structField.Type)
 			}
 			v.Elem().SetFloat(value)
 			field.Set(v)
 		} else {
 			if field.OverflowFloat(value) {
-				return errors.Errorf(overflowErrMsg, value, structField.Name, structField.Type)
+				return fmt.Errorf(overflowErrMsg, value, structField.Name, structField.Type)
 			}
 			field.SetFloat(value)
 		}
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		value, err := strconv.ParseUint(rawValue, 10, 64)
 		if err != nil {
-			return errors.Wrapf(err, castingErrMsg, rawValue, structField.Name, structField.Type)
+			return fmt.Errorf(castingErrMsg, rawValue, structField.Name, structField.Type, err)
 		}
 		if isPointer {
 			v := reflect.New(field.Type().Elem())
 			if v.Elem().OverflowUint(value) {
-				return errors.Errorf(overflowErrMsg, value, structField.Name, structField.Type)
+				return fmt.Errorf(overflowErrMsg, value, structField.Name, structField.Type)
 			}
 			v.Elem().SetUint(value)
 			field.Set(v)
 		} else {
 			if field.OverflowUint(value) {
-				return errors.Errorf(overflowErrMsg, value, structField.Name, structField.Type)
+				return fmt.Errorf(overflowErrMsg, value, structField.Name, structField.Type)
 			}
 			field.SetUint(value)
 		}
@@ -248,7 +246,7 @@ func setFieldValue(field reflect.Value, structField reflect.StructField, rawValu
 	case reflect.Bool:
 		value, err := strconv.ParseBool(rawValue)
 		if err != nil {
-			return errors.Wrapf(err, castingErrMsg, rawValue, structField.Name, structField.Type)
+			return fmt.Errorf(castingErrMsg, rawValue, structField.Name, structField.Type, err)
 		}
 		if isPointer {
 			field.Set(reflect.ValueOf(&value))
@@ -263,7 +261,7 @@ func setFieldValue(field reflect.Value, structField reflect.StructField, rawValu
 			}
 			t, err := time.Parse(timeFormat, rawValue)
 			if err != nil {
-				return errors.Wrapf(err, castingErrMsg, rawValue, structField.Name, structField.Type)
+				return fmt.Errorf(castingErrMsg, rawValue, structField.Name, structField.Type, err)
 			}
 			if isPointer {
 				field.Set(reflect.ValueOf(&t))
@@ -277,7 +275,7 @@ func setFieldValue(field reflect.Value, structField reflect.StructField, rawValu
 		v := reflect.New(field.Type())
 		err := json.Unmarshal([]byte(rawValue), v.Interface())
 		if err != nil {
-			return errors.Wrapf(err, `can't unmarshal '"%s" to %v`, rawValue, field.Type())
+			return fmt.Errorf(`can't unmarshal '"%s" to %v: %w`, rawValue, field.Type(), err)
 		}
 		field.Set(v.Elem())
 	}
@@ -301,7 +299,7 @@ func parseHeaders(headerLine string, columnNames []string) ([]fwColumn, error) {
 		colName := columnNames[i]
 		re, err := regexp.Compile(fmt.Sprintf("(%s *)", colName))
 		if err != nil {
-			return nil, errors.Wrapf(err, "%s column parsing error", colName)
+			return nil, fmt.Errorf("%s column parsing error: %w", colName, err)
 		}
 
 		loc := re.FindStringIndex(headerLine)

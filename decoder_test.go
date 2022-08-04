@@ -1,11 +1,10 @@
 package fwencoder
 
 import (
-	"io/ioutil"
-	"testing"
-
 	"fmt"
+	"io/ioutil"
 	"math"
+	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"

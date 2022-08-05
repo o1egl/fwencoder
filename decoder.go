@@ -40,24 +40,24 @@ var (
 // supported types (int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64, string, bool, time.Time).
 // It also supports slices and custom types by reading them as JSON.
 //
-// By default Unmarshal tries to match column names to struct's field names. This behavior could be
+// By default, Unmarshal tries to match column names to struct's field names. This behavior could be
 // overridden by `column` or `json` tags.
 //
-// By default time.RFC3339 is used to parse time.Time data. To override this behavior use `format` tag.
+// By default, time.RFC3339 is used to parse time.Time data. To override this behavior use `format` tag.
 // For example:
 //
-//     type Person struct {
-//         Name     string
-//         BDate    time.Time `column:"Birthday" format:"2006/01/02"`
-//         Postcode int       `json:"Zip"`
-//     }
-//
+//	type Person struct {
+//	    Name     string
+//	    BDate    time.Time `column:"Birthday" format:"2006/01/02"`
+//	    Postcode int       `json:"Zip"`
+//	}
 func Unmarshal(data []byte, v interface{}) error {
 	return UnmarshalReader(bytes.NewReader(data), v)
 }
 
-//nolint:gocyclo
 // UnmarshalReader behaves the same as Unmarshal, but reads data from io.Reader
+//
+//nolint:gocyclo
 func UnmarshalReader(reader io.Reader, v interface{}) (err error) {
 	defer func() {
 		if r := recover(); r != nil {

@@ -38,11 +38,11 @@ func (c columnWidthMap) Set(name string, width uint64) {
 // By default, time.RFC3339 is used to parse time.Time data. To override this behavior use `format` tag.
 // For example:
 //
-//     type Person struct {
-//         Name     string
-//         BDate    time.Time `column:"Birthday" format:"2006/01/02"`
-//         Postcode int       `json:"Zip"`
-//     }
+//	type Person struct {
+//	    Name     string
+//	    BDate    time.Time `column:"Birthday" format:"2006/01/02"`
+//	    Postcode int       `json:"Zip"`
+//	}
 func Marshal(v interface{}) ([]byte, error) {
 	buf := bytes.Buffer{}
 	err := MarshalWriter(&buf, v)

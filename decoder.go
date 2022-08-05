@@ -40,10 +40,10 @@ var (
 // supported types (int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64, string, bool, time.Time).
 // It also supports slices and custom types by reading them as JSON.
 //
-// By default Unmarshal tries to match column names to struct's field names. This behaviour could be
+// By default Unmarshal tries to match column names to struct's field names. This behavior could be
 // overridden by `column` or `json` tags.
 //
-// By default time.RFC3339 is used to parse time.Time data. To override this behaviour use `format` tag.
+// By default time.RFC3339 is used to parse time.Time data. To override this behavior use `format` tag.
 // For example:
 //
 //     type Person struct {
@@ -56,6 +56,7 @@ func Unmarshal(data []byte, v interface{}) error {
 	return UnmarshalReader(bytes.NewReader(data), v)
 }
 
+//nolint:gocyclo
 // UnmarshalReader behaves the same as Unmarshal, but reads data from io.Reader
 func UnmarshalReader(reader io.Reader, v interface{}) (err error) {
 	defer func() {
@@ -142,13 +143,13 @@ func UnmarshalReader(reader io.Reader, v interface{}) (err error) {
 }
 
 func getRefName(field reflect.StructField) string {
-	name := field.Name
-	if fwCol, ok := field.Tag.Lookup(columnTagName); ok {
-		name = fwCol
-	} else if fwCol, ok := field.Tag.Lookup(jsonTagName); ok {
-		name = fwCol
+	if name, ok := field.Tag.Lookup(columnTagName); ok {
+		return name
 	}
-	return name
+	if name, ok := field.Tag.Lookup(jsonTagName); ok {
+		return name
+	}
+	return field.Name
 }
 
 func createObject(fieldsIndex map[string]string, t reflect.Type) (reflect.Value, error) {
@@ -171,6 +172,7 @@ func createObject(fieldsIndex map[string]string, t reflect.Type) (reflect.Value,
 	return sp, nil
 }
 
+//nolint:gocyclo,funlen
 func setFieldValue(field reflect.Value, structField reflect.StructField, rawValue string) error {
 	rawValue = strings.TrimSpace(rawValue)
 	fieldKind := field.Type().Kind()
@@ -178,7 +180,7 @@ func setFieldValue(field reflect.Value, structField reflect.StructField, rawValu
 	if isPointer {
 		fieldKind = field.Type().Elem().Kind()
 	}
-
+	//nolint:dupl
 	switch fieldKind {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		value, err := strconv.ParseInt(rawValue, 10, 0)

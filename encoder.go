@@ -11,9 +11,9 @@ import (
 	"time"
 )
 
-type columnWidth map[string]uint64
+type columnWidthMap map[string]uint64
 
-func (c columnWidth) Set(name string, width uint64) {
+func (c columnWidthMap) Set(name string, width uint64) {
 	old, ok := c[name]
 	if !ok {
 		c[name], old = uint64(len([]rune(name))), uint64(len([]rune(name)))
@@ -27,14 +27,15 @@ func (c columnWidth) Set(name string, width uint64) {
 // Marshal returns the fixed width table data encoding of v
 // If v is nil or not a pointer to slice of structs, Unmarshal returns an ErrIncorrectInputValue.
 //
-// By default Marshal converts struct's field names to column names. This behaviour could be
+// By default, Marshal converts struct's field names to column names. This behavior could be
 // overridden by `column` or `json` tags.
 //
 // To unmarshal raw data into a struct, Unmarshal tries to convert every column's data from string to
-// Marshal converts base go types into their string representation (int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64, string, bool, time.Time)
+// Marshal converts base go types into their string representation (int, int8, int16, int32, int64, uint, uint8, uint16,
+// uint32, uint64, float32, float64, string, bool, time.Time)
 // It also supports slices and custom types by converting them to JSON.
 //
-// By default time.RFC3339 is used to parse time.Time data. To override this behaviour use `format` tag.
+// By default, time.RFC3339 is used to parse time.Time data. To override this behavior use `format` tag.
 // For example:
 //
 //     type Person struct {
@@ -86,9 +87,68 @@ func MarshalWriter(writer io.Writer, v interface{}) (err error) {
 	}
 
 	columnNames := getColumns(sliceType)
-	columnWidthIndex := make(columnWidth, len(columnNames))
+	columnWidthIndex, err := makeColumnWidthIndex(slice, columnNames)
+	if err != nil {
+		return err
+	}
 
-	// calculate column sizes
+	if err := writeHeader(writer, columnNames, columnWidthIndex); err != nil {
+		return err
+	}
+
+	return writeData(writer, slice, columnWidthIndex)
+}
+
+func writeData(writer io.Writer, slice reflect.Value, columnWidthIndex columnWidthMap) error {
+	for i := 0; i < slice.Len(); i++ {
+		item := slice.Index(i)
+		if item.Kind() == reflect.Ptr {
+			item = item.Elem()
+		}
+		fieldsCount := item.NumField()
+		for fieldIndex := 0; fieldIndex < fieldsCount; fieldIndex++ {
+			fieldValue := item.Field(fieldIndex)
+			fieldInfo := item.Type().Field(fieldIndex)
+			refName := getRefName(fieldInfo)
+			columnWidth := columnWidthIndex[refName]
+			if err := writeValue(writer, fieldValue, fieldInfo, columnWidth); err != nil {
+				return err
+			}
+			if fieldIndex != fieldsCount-1 {
+				if _, err := writer.Write([]byte(" ")); err != nil {
+					return err
+				}
+			}
+		}
+
+		if i != slice.Len()-1 {
+			if _, err := writer.Write([]byte("\n")); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func writeHeader(writer io.Writer, columnNames []string, columnWidthIndex columnWidthMap) error {
+	for i, c := range columnNames {
+		if _, err := fmt.Fprintf(writer, "%-"+strconv.FormatUint(columnWidthIndex[c], 10)+"s", c); err != nil {
+			return err
+		}
+		if i != len(columnNames)-1 {
+			if _, err := writer.Write([]byte(" ")); err != nil {
+				return err
+			}
+		}
+	}
+	if _, err := writer.Write([]byte("\n")); err != nil {
+		return err
+	}
+	return nil
+}
+
+func makeColumnWidthIndex(slice reflect.Value, columnNames []string) (columnWidthMap, error) {
+	columnWidthIndex := make(columnWidthMap, len(columnNames))
 	for i := 0; i < slice.Len(); i++ {
 		item := slice.Index(i)
 
@@ -106,56 +166,24 @@ func MarshalWriter(writer io.Writer, v interface{}) (err error) {
 			refName := getRefName(typeField)
 			fieldLen, err := getFieldLen(currentField, typeField)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			columnWidthIndex.Set(refName, fieldLen)
 		}
 	}
-
-	// write header
-	for i, c := range columnNames {
-		fmt.Fprintf(writer, "%-"+strconv.FormatUint(columnWidthIndex[c], 10)+"s", c)
-		if i != len(columnNames)-1 {
-			writer.Write([]byte(" "))
-		}
-	}
-	writer.Write([]byte("\n"))
-
-	// write data
-	for i := 0; i < slice.Len(); i++ {
-		item := slice.Index(i)
-		if item.Kind() == reflect.Ptr {
-			item = item.Elem()
-		}
-		fieldsCount := item.NumField()
-		for fieldIndex := 0; fieldIndex < fieldsCount; fieldIndex++ {
-			fieldValue := item.Field(fieldIndex)
-			fieldInfo := item.Type().Field(fieldIndex)
-			refName := getRefName(fieldInfo)
-			columnWidth := columnWidthIndex[refName]
-			err = writeValue(writer, fieldValue, fieldInfo, columnWidth)
-			if err != nil {
-				return err
-			}
-			if fieldIndex != fieldsCount-1 {
-				writer.Write([]byte(" "))
-			}
-		}
-
-		if i != slice.Len()-1 {
-			writer.Write([]byte("\n"))
-		}
-	}
-
-	return err
+	return columnWidthIndex, nil
 }
+
+//nolint:gocyclo
 func writeValue(w io.Writer, value reflect.Value, field reflect.StructField, width uint64) error {
 	gap := strconv.FormatUint(width, 10)
 
 	if value.Kind() == reflect.Ptr {
 		if value.IsNil() {
 			for i := uint64(0); i < width; i++ {
-				w.Write([]byte(" "))
+				if _, err := w.Write([]byte(" ")); err != nil {
+					return err
+				}
 			}
 			return nil
 		}
@@ -164,26 +192,40 @@ func writeValue(w io.Writer, value reflect.Value, field reflect.StructField, wid
 
 	switch value.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		fmt.Fprintf(w, "%-"+gap+"d", value.Int())
+		if _, err := fmt.Fprintf(w, "%-"+gap+"d", value.Int()); err != nil {
+			return err
+		}
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		fmt.Fprintf(w, "%-"+gap+"d", value.Uint())
+		if _, err := fmt.Fprintf(w, "%-"+gap+"d", value.Uint()); err != nil {
+			return err
+		}
 	case reflect.Float32, reflect.Float64:
-		fmt.Fprintf(w, "%-"+gap+"g", value.Float())
+		if _, err := fmt.Fprintf(w, "%-"+gap+"g", value.Float()); err != nil {
+			return err
+		}
 	case reflect.Bool:
 		if value.Bool() {
-			fmt.Fprintf(w, "%-"+gap+"s", "true")
+			if _, err := fmt.Fprintf(w, "%-"+gap+"s", "true"); err != nil {
+				return err
+			}
 		} else {
-			fmt.Fprintf(w, "%-"+gap+"s", "false")
+			if _, err := fmt.Fprintf(w, "%-"+gap+"s", "false"); err != nil {
+				return err
+			}
 		}
 	case reflect.String:
-		fmt.Fprintf(w, "%-"+gap+"s", value.String())
+		if _, err := fmt.Fprintf(w, "%-"+gap+"s", value.String()); err != nil {
+			return err
+		}
 	case reflect.Struct:
 		if value.Type() == reflect.TypeOf(time.Time{}) {
 			timeFormat, ok := field.Tag.Lookup(format)
 			if !ok {
 				timeFormat = time.RFC3339
 			}
-			fmt.Fprintf(w, "%-"+gap+"s", value.Interface().(time.Time).Format(timeFormat))
+			if _, err := fmt.Fprintf(w, "%-"+gap+"s", value.Interface().(time.Time).Format(timeFormat)); err != nil {
+				return err
+			}
 			return nil
 		}
 		fallthrough
@@ -192,7 +234,9 @@ func writeValue(w io.Writer, value reflect.Value, field reflect.StructField, wid
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(w, "%-"+gap+"s", string(b))
+		if _, err := fmt.Fprintf(w, "%-"+gap+"s", string(b)); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -214,9 +258,9 @@ func getFieldLen(value reflect.Value, field reflect.StructField) (uint64, error)
 		return uint64(len(strconv.FormatFloat(value.Float(), 'f', -1, 64))), nil
 	case reflect.Bool:
 		if value.Bool() {
-			return 4, nil
+			return 4, nil //nolint:gomnd
 		} else {
-			return 5, nil
+			return 5, nil //nolint:gomnd
 		}
 	case reflect.String:
 		return uint64(len(value.String())), nil
@@ -234,6 +278,6 @@ func getFieldLen(value reflect.Value, field reflect.StructField) (uint64, error)
 		if err != nil {
 			return 0, err
 		}
-		return uint64(len(string(b))), nil
+		return uint64(len(b)), nil
 	}
 }

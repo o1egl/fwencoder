@@ -2,8 +2,8 @@ package fwencoder
 
 import (
 	"fmt"
-	"io/ioutil"
 	"math"
+	"os"
 	"testing"
 	"time"
 
@@ -34,12 +34,12 @@ type TestStruct struct {
 	PFloat32  *float32
 	PBirthday *time.Time `format:"02/01/2006"`
 	Default   int
-	JsonArr   []int
-	JsonPtr   *[]int
+	JSONArr   []int
+	JSONPtr   *[]int
 }
 
 func TestUnmarshal_Success(t *testing.T) {
-	b, err := ioutil.ReadFile("./testdata/correct_all_supported.txt")
+	b, err := os.ReadFile("./testdata/correct_all_supported.txt")
 	if assert.NoError(t, err) {
 		s := "Test Ptr String"
 		bb := false
@@ -71,8 +71,8 @@ func TestUnmarshal_Success(t *testing.T) {
 			PUint8:    &ui,
 			PFloat32:  &f,
 			PBirthday: &d,
-			JsonArr:   []int{1, 2, 3},
-			JsonPtr:   &[]int{4, 5, 6},
+			JSONArr:   []int{1, 2, 3},
+			JSONPtr:   &[]int{4, 5, 6},
 		}}
 
 		var obtained []TestStruct
@@ -83,7 +83,7 @@ func TestUnmarshal_Success(t *testing.T) {
 }
 
 func TestUnmarshal_Ptr_Success(t *testing.T) {
-	b, err := ioutil.ReadFile("./testdata/correct_all_supported.txt")
+	b, err := os.ReadFile("./testdata/correct_all_supported.txt")
 	if assert.NoError(t, err) {
 		s := "Test Ptr String"
 		bb := false
@@ -115,8 +115,8 @@ func TestUnmarshal_Ptr_Success(t *testing.T) {
 			PUint8:    &ui,
 			PFloat32:  &f,
 			PBirthday: &d,
-			JsonArr:   []int{1, 2, 3},
-			JsonPtr:   &[]int{4, 5, 6},
+			JSONArr:   []int{1, 2, 3},
+			JSONPtr:   &[]int{4, 5, 6},
 		}}
 
 		var obtained []*TestStruct
@@ -193,7 +193,6 @@ func TestUnmarshal_Error(t *testing.T) {
 			assert.Contains(t, err.Error(), data.Error)
 		}
 	}
-
 }
 
 func TestIncorrectInput(t *testing.T) {
@@ -216,13 +215,12 @@ func TestIncorrectInput(t *testing.T) {
 		Float32 B
 	}
 
-	err := Unmarshal([]byte(fmt.Sprintf("Float32\nhello  ")), &([]A{}))
+	err := Unmarshal([]byte("Float32\nhello  "), &([]A{}))
 	if assert.Error(t, err) {
 		assert.Contains(t, err.Error(), "error in line 2: can't unmarshal")
-
 	}
 
-	err = Unmarshal([]byte(fmt.Sprintf("Float32\nhello  ")), &([]B{}))
+	err = Unmarshal([]byte("Float32\nhello  "), &([]B{}))
 	if assert.Error(t, err) {
 		assert.Contains(t, err.Error(), "error parsing regexp")
 	}

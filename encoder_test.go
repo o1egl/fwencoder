@@ -2,7 +2,7 @@ package fwencoder
 
 import (
 	"bytes"
-	"io/ioutil"
+	"os"
 	"testing"
 	"time"
 
@@ -42,16 +42,16 @@ func TestMarshalWriter(t *testing.T) {
 		PUint8:    &ui,
 		PFloat32:  &f,
 		PBirthday: &d,
-		JsonArr:   []int{1, 2, 3},
-		JsonPtr:   &[]int{4, 5, 6},
+		JSONArr:   []int{1, 2, 3},
+		JSONPtr:   &[]int{4, 5, 6},
 	},
 		{
 			String:  "Another test string",
-			JsonPtr: &[]int{4, 5, 6},
+			JSONPtr: &[]int{4, 5, 6},
 		}}
 
 	if assert.NoError(t, MarshalWriter(buf, &obj)) {
-		b, err := ioutil.ReadFile("./testdata/marshal.txt")
+		b, err := os.ReadFile("./testdata/marshal.txt")
 		if b[len(b)-1] == '\n' {
 			b = b[:len(b)-1]
 		}
@@ -94,16 +94,16 @@ func TestMarshalPtr(t *testing.T) {
 		PUint8:    &ui,
 		PFloat32:  &f,
 		PBirthday: &d,
-		JsonArr:   []int{1, 2, 3},
-		JsonPtr:   &[]int{4, 5, 6},
+		JSONArr:   []int{1, 2, 3},
+		JSONPtr:   &[]int{4, 5, 6},
 	},
 		{
 			String:  "Another test string",
-			JsonPtr: &[]int{4, 5, 6},
+			JSONPtr: &[]int{4, 5, 6},
 		}}
 
 	if assert.NoError(t, MarshalWriter(buf, &obj)) {
-		b, err := ioutil.ReadFile("./testdata/marshal.txt")
+		b, err := os.ReadFile("./testdata/marshal.txt")
 		if b[len(b)-1] == '\n' {
 			b = b[:len(b)-1]
 		}

@@ -1,8 +1,8 @@
 # Fixed width file parser (encoder/decoder) for GO (golang)
 [![License](http://img.shields.io/:license-mit-blue.svg)](LICENSE)
 [![GoDoc](https://godoc.org/github.com/o1egl/fwencoder?status.svg)](https://godoc.org/github.com/o1egl/fwencoder)
-[![Build Status](http://img.shields.io/travis/o1egl/fwencoder.svg?style=flat-square)](https://travis-ci.org/o1egl/fwencoder)
-[![Coverage Status](http://img.shields.io/coveralls/o1egl/fwencoder.svg?style=flat-square)](https://coveralls.io/r/o1egl/fwencoder)
+![Build Status](https://github.com/o1egl/fwencoder/actions/workflows/build.yml/badge.svg?branch=master)
+[![codecov](https://codecov.io/gh/o1egl/fwencoder/branch/master/graph/badge.svg?token=BPBYoYAeZ0)](https://codecov.io/gh/o1egl/fwencoder)
 [![Go Report Card](https://goreportcard.com/badge/github.com/o1egl/fwencoder)](https://goreportcard.com/report/github.com/o1egl/fwencoder)
 
 This library is using to parse fixed-width table data like:

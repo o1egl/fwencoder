@@ -36,7 +36,7 @@ type Person struct {
 }
 
 f, _ := os.Open("/path/to/file")
-defer f.Close
+defer f.Close()
 
 var people []Person
 err := fwencoder.UnmarshalReader(f, &people)
@@ -62,7 +62,7 @@ people := []Person{
 	Bday: "19651203"
 }
 
-b, err := Marshal(&people)
+b, err := fwencoder.Marshal(&people)
 fmt.Println(string(b))
 ```
 
@@ -77,5 +77,5 @@ people := []Person{
 	Bday: "19651203"
 }
 
-err := MarshalWriter(os.Stdout, &people)
+err := fwencoder.MarshalWriter(os.Stdout, &people)
 ```

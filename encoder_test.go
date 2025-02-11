@@ -126,7 +126,7 @@ func TestMarshal_IncorrectInput(t *testing.T) {
 	}
 }
 
-func marshallErr(i interface{}) error {
+func marshallErr(i any) error {
 	_, err := Marshal(i)
 	return err
 }

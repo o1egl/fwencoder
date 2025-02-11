@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type TestStruct struct {
@@ -204,7 +205,7 @@ func TestIncorrectInput(t *testing.T) {
 	}
 
 	for _, err := range errs {
-		assert.EqualError(t, err, ErrIncorrectInputValue.Error())
+		require.EqualError(t, err, ErrIncorrectInputValue.Error())
 	}
 
 	type B struct {

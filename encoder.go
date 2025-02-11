@@ -43,14 +43,14 @@ func (c columnWidthMap) Set(name string, width uint64) {
 //	    BDate    time.Time `column:"Birthday" format:"2006/01/02"`
 //	    Postcode int       `json:"Zip"`
 //	}
-func Marshal(v interface{}) ([]byte, error) {
+func Marshal(v any) ([]byte, error) {
 	buf := bytes.Buffer{}
 	err := MarshalWriter(&buf, v)
 	return buf.Bytes(), err
 }
 
 // MarshalWriter behaves the same as Marshal, but write data into io.Writer
-func MarshalWriter(writer io.Writer, v interface{}) (err error) {
+func MarshalWriter(writer io.Writer, v any) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			if _, ok := r.(runtime.Error); ok {
@@ -100,18 +100,18 @@ func MarshalWriter(writer io.Writer, v interface{}) (err error) {
 }
 
 func writeData(writer io.Writer, slice reflect.Value, columnWidthIndex columnWidthMap) error {
-	for i := 0; i < slice.Len(); i++ {
+	for i := range slice.Len() {
 		item := slice.Index(i)
 		if item.Kind() == reflect.Ptr {
 			item = item.Elem()
 		}
 		fieldsCount := item.NumField()
-		for fieldIndex := 0; fieldIndex < fieldsCount; fieldIndex++ {
+		for fieldIndex := range fieldsCount {
 			fieldValue := item.Field(fieldIndex)
 			fieldInfo := item.Type().Field(fieldIndex)
-			refName := getRefName(fieldInfo)
+			refName := getRefName(&fieldInfo)
 			columnWidth := columnWidthIndex[refName]
-			if err := writeValue(writer, fieldValue, fieldInfo, columnWidth); err != nil {
+			if err := writeValue(writer, fieldValue, &fieldInfo, columnWidth); err != nil {
 				return err
 			}
 			if fieldIndex != fieldsCount-1 {
@@ -149,7 +149,7 @@ func writeHeader(writer io.Writer, columnNames []string, columnWidthIndex column
 
 func makeColumnWidthIndex(slice reflect.Value, columnNames []string) (columnWidthMap, error) {
 	columnWidthIndex := make(columnWidthMap, len(columnNames))
-	for i := 0; i < slice.Len(); i++ {
+	for i := range slice.Len() {
 		item := slice.Index(i)
 
 		if item.Kind() == reflect.Ptr {
@@ -160,11 +160,11 @@ func makeColumnWidthIndex(slice reflect.Value, columnNames []string) (columnWidt
 		}
 
 		fieldsCount := item.NumField()
-		for fieldIndex := 0; fieldIndex < fieldsCount; fieldIndex++ {
+		for fieldIndex := range fieldsCount {
 			currentField := item.Field(fieldIndex)
 			typeField := item.Type().Field(fieldIndex)
-			refName := getRefName(typeField)
-			fieldLen, err := getFieldLen(currentField, typeField)
+			refName := getRefName(&typeField)
+			fieldLen, err := getFieldLen(currentField, &typeField)
 			if err != nil {
 				return nil, err
 			}
@@ -174,13 +174,13 @@ func makeColumnWidthIndex(slice reflect.Value, columnNames []string) (columnWidt
 	return columnWidthIndex, nil
 }
 
-//nolint:gocyclo
-func writeValue(w io.Writer, value reflect.Value, field reflect.StructField, width uint64) error {
+//nolint:gocyclo // it's ok
+func writeValue(w io.Writer, value reflect.Value, field *reflect.StructField, width uint64) error {
 	gap := strconv.FormatUint(width, 10)
 
 	if value.Kind() == reflect.Ptr {
 		if value.IsNil() {
-			for i := uint64(0); i < width; i++ {
+			for range width {
 				if _, err := w.Write([]byte(" ")); err != nil {
 					return err
 				}
@@ -241,7 +241,12 @@ func writeValue(w io.Writer, value reflect.Value, field reflect.StructField, wid
 	return nil
 }
 
-func getFieldLen(value reflect.Value, field reflect.StructField) (uint64, error) {
+func getFieldLen(value reflect.Value, field *reflect.StructField) (uint64, error) {
+	const (
+		trueLen  = 4
+		falseLen = 5
+	)
+
 	if value.Kind() == reflect.Ptr {
 		if value.IsNil() {
 			return 0, nil
@@ -258,9 +263,9 @@ func getFieldLen(value reflect.Value, field reflect.StructField) (uint64, error)
 		return uint64(len(strconv.FormatFloat(value.Float(), 'f', -1, 64))), nil
 	case reflect.Bool:
 		if value.Bool() {
-			return 4, nil //nolint:gomnd
+			return trueLen, nil
 		} else {
-			return 5, nil //nolint:gomnd
+			return falseLen, nil
 		}
 	case reflect.String:
 		return uint64(len(value.String())), nil
